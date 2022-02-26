@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: elecv2p
 
     steps:
       - name: Checkout
@@ -42,7 +44,10 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           file: ./Docker/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+                
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Sync Readme
@@ -50,7 +55,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          repository: ${{ secrets.DOCKER_HUB_USERNAME }}/elecv2p
+          repository: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}
           readme: "./Readme.md"
 
       - name: Image digest
