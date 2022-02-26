@@ -50,7 +50,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          repository: goovoz/elecv2p
+          repository: ${{ secrets.DOCKER_HUB_USERNAME }}/elecv2p
           readme: "./Readme.md"
 
       - name: Image digest
