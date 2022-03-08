@@ -102,11 +102,11 @@ const efhcache = new Map();
  * efh 文件处理
  * @param     {string}    filename    efh 文件
  * @param     {string}    options     title: efh html 缺省 title
- * @return    {object}                efh 文件处理结果 { html, code }
+ * @return    {object}                efh 文件处理结果 { html, script }
  */
 async function efhParse(filename, { title='', type='', name } = {}) {
   let efhc = { name: '', date: 0, html: '', script: '', type: '' };
-  if (/^https?:\/\/\S{4}/.test(filename)) {
+  if (type !== 'rawcode' && /^https?:\/\/\S{4}/.test(filename)) {
     // 远程 efh 文件
     let furl = filename.split(' ')[0];
     filename = name || surlName(furl);
@@ -125,10 +125,11 @@ async function efhParse(filename, { title='', type='', name } = {}) {
       }
     }
   } else {
-    if (name) {
+    if (type === 'rawcode') {
+      efhc.html = filename
+      filename  = name || 'rawcode.efh'
+    } else if (name) {
       filename = name;
-    } else if (type === 'rawcode') {
-      filename = 'rawcode.efh';
     }
   }
   // 本地 efh 文件，先判断 cache 是否存在，再处理内容
@@ -143,13 +144,16 @@ async function efhParse(filename, { title='', type='', name } = {}) {
       efhc.html = '';
       efhc.script = '';
     }
-  } else {
+  } else if (tdate) {
     efhc.date = tdate;
     efhcache.set(filename, efhc);
   }
   efhc.name = filename;
-  if (!efhc.html) {
-    let efhcont = type === 'rawcode' ? filename : Jsfile.get(filename);
+  if (type === 'rawcode' || !efhc.html) {
+    let efhcont = efhc.html;
+    if (type !== 'rawcode') {
+      efhcont = Jsfile.get(filename);
+    }
     if (!efhcont) {
       efhc.html = filename + ' not exist';
       clog.info(efhc.html);
@@ -277,8 +281,8 @@ function runJS(filename, jscode, addContext={}) {
   }
   if (compatible.nodejs || compatible.require) {
     CONTEXT.final.require = (request)=>{
-      request = require.resolve(request, { paths: [CONTEXT.final.__dirname] })
       fconsole.notify('require external resource:', request)
+      request = require.resolve(request, { paths: [CONTEXT.final.__dirname] })
       return require(request)
     }
     CONTEXT.final.require.resolve = (request)=>require.resolve(request, { paths: [CONTEXT.final.__dirname] })
@@ -463,7 +467,7 @@ async function runJSFile(filename, addContext={}) {
     // 直接运行 efh 文件初版。本地/远程/rawcode 命名
     let efhname = addContext.rename || addContext.filename || filename;
     let efhc = await efhParse(filename, { type: addContext.type, name: addContext.rename || addContext.filename });
-    if (efhc.script && addContext.$request?.method === 'POST') {
+    if (addContext.env.runon === 'backend' || (efhc.script && addContext.$request?.method === 'POST')) {
       runclog.debug('run', efhname, 'backend code from', addContext.from);
       filename = efhc.script;
       addContext.type = efhc.type;
